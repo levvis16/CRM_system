@@ -3,11 +3,13 @@ from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
 import logging
 
-from app.api.v1 import contacts, deals, tasks, analytics, integrations
-from app.api import websocket
-from app.core.config import settings
+# Импортируем только то, что уже создали
+from app.api.v1 import contacts, deals, auth
+# from app.api.v1 import tasks, analytics, integrations  # ← пока не существует
+# from app.api import websocket  # ← пока не существует
+
 from app.core.database import engine, Base
-from app.core.security import create_first_superuser
+# from app.core.security import create_first_superuser  # ← пока не используем
 
 # Настройка логирования
 logging.basicConfig(
@@ -24,78 +26,56 @@ async def lifespan(app: FastAPI):
     # Startup
     logger.info("Starting up CRM application...")
     
+    # Создаем таблицы в БД (асинхронно)
     async with engine.begin() as conn:
         await conn.run_sync(Base.metadata.create_all)
     
-    await create_first_superuser()
+    logger.info("Database tables created successfully!")
     
     logger.info("CRM application started successfully!")
     
     yield
     
-    
+    # Shutdown
     logger.info("Shutting down CRM application...")
-    await engine.dispose()
+    await engine.dispose()  # Закрываем соединения с БД
     logger.info("CRM application shut down.")
 
 # Создание FastAPI приложения
 app = FastAPI(
-    title=settings.PROJECT_NAME,
-    version=settings.VERSION,
-    openapi_url=f"{settings.API_V1_STR}/openapi.json",
+    title="CRM System",
+    version="1.0.0",
+    docs_url="/docs",
+    redoc_url="/redoc",
     lifespan=lifespan,
-    docs_url="/docs" if settings.DEBUG else None,
-    redoc_url="/redoc" if settings.DEBUG else None,
 )
 
 # Настройка CORS
-if settings.BACKEND_CORS_ORIGINS:
-    app.add_middleware(
-        CORSMiddleware,
-        allow_origins=[str(origin) for origin in settings.BACKEND_CORS_ORIGINS],
-        allow_credentials=True,
-        allow_methods=["*"],
-        allow_headers=["*"],
-    )
+app.add_middleware(
+    CORSMiddleware,
+    allow_origins=["*"],  # Для разработки можно *
+    allow_credentials=True,
+    allow_methods=["*"],
+    allow_headers=["*"],
+)
 
-# Подключаем роутеры API v1
+# Подключаем только существующие роутеры
 app.include_router(
     contacts.router,
-    prefix=f"{settings.API_V1_STR}/contacts",
+    prefix="/api/v1/contacts",
     tags=["contacts"],
 )
 
-'''
-
 app.include_router(
     deals.router,
-    prefix=f"{settings.API_V1_STR}/deals",
+    prefix="/api/v1/deals",
     tags=["deals"],
 )
 
 app.include_router(
-    tasks.router,
-    prefix=f"{settings.API_V1_STR}/tasks",
-    tags=["tasks"],
-)
-
-app.include_router(
-    analytics.router,
-    prefix=f"{settings.API_V1_STR}/analytics",
-    tags=["analytics"],
-)
-
-app.include_router(
-    integrations.router,
-    prefix=f"{settings.API_V1_STR}/integrations",
-    tags=["integrations"],
-)
-
-# WebSocket endpoint
-app.include_router(
-    websocket.router,
-    prefix="/ws",
-    tags=["websocket"],
+    auth.router,
+    prefix="/api/v1/auth",
+    tags=["auth"],
 )
 
 # Health check endpoint
@@ -104,8 +84,8 @@ async def health_check():
     """Проверка работоспособности приложения"""
     return {
         "status": "healthy",
-        "service": settings.PROJECT_NAME,
-        "version": settings.VERSION,
+        "service": "CRM System",
+        "version": "1.0.0",
     }
 
 @app.get("/")
@@ -114,17 +94,15 @@ async def root():
     return {
         "message": "Welcome to CRM API",
         "docs": "/docs",
-        "version": settings.VERSION,
-        "api_v1": settings.API_V1_STR,
+        "version": "1.0.0",
+        "api_v1": "/api/v1",
     }
 
 if __name__ == "__main__":
     import uvicorn
     uvicorn.run(
         "app.main:app",
-        host=settings.HOST,
-        port=settings.PORT,
-        reload=settings.DEBUG,
+        host="0.0.0.0",
+        port=8000,
+        reload=True,
     )
-
-'''

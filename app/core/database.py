@@ -7,16 +7,13 @@ import os
 class Base(DeclarativeBase):
     pass
 
-# Для SQLite (просто для теста)
-DATABASE_URL = "sqlite+aiosqlite:///./test.db"
+# Для SQLite (асинхронная версия)
+DATABASE_URL = "sqlite+aiosqlite:///./crm.db"
 
-# Для PostgreSQL (раскомментировать когда будет БД)
-# DATABASE_URL = "postgresql+asyncpg://user:password@localhost/crm_db"
-
-# Создаем движок
+# Создаем асинхронный движок
 engine = create_async_engine(
     DATABASE_URL,
-    echo=True,  # Показывать SQL запросы в консоли
+    echo=True,
     future=True
 )
 
@@ -40,8 +37,8 @@ async def get_db() -> AsyncGenerator[AsyncSession, None]:
         finally:
             await session.close()
 
-# Функция для создания таблиц (для разработки)
+# Функция для создания таблиц (для асинхронного движка)
 async def create_tables():
-    """Создать все таблицы в БД"""
+    """Создать все таблицы в БД (асинхронно)"""
     async with engine.begin() as conn:
         await conn.run_sync(Base.metadata.create_all)

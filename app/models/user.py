@@ -1,5 +1,5 @@
 from sqlalchemy import Boolean, Column, Integer, String
-from sqlalchemy.orm import relationship
+# from sqlalchemy.orm import relationship  # ← пока убрать
 
 from app.core.database import Base
 
@@ -13,6 +13,6 @@ class User(Base):
     is_active = Column(Boolean, default=True)
     is_superuser = Column(Boolean, default=False)
     
-    # Связи
-    contacts = relationship("Contact", back_populates="user")
-    deals = relationship("Deal", back_populates="user")
+    # Связи (пока закомментировать)
+    # contacts = relationship("Contact", back_populates="user")
+    # deals = relationship("Deal", back_populates="user")
